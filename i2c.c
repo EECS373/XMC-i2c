@@ -32,6 +32,17 @@ static bool wait_for_flags(XMC_USIC_CH_t *hw, uint32_t flags)
     return false;
 }
 
+/* Reset I2C, triggered when there is a fault*/
+static void reset_i2c(XMC_USIC_CH_t *hw)
+{
+    XMC_USIC_CH_SetMode(hw, XMC_USIC_CH_OPERATING_MODE_IDLE);
+    XMC_USIC_CH_TXFIFO_Flush(hw);
+    XMC_USIC_CH_SetTransmitBufferStatus(hw, XMC_USIC_CH_TBUF_STATUS_SET_IDLE);
+    XMC_USIC_CH_InvalidateReadData(hw);
+    XMC_I2C_CH_ClearStatusFlag(hw, 0xFFFFFFFFU);
+    XMC_I2C_CH_Start(hw);
+}
+
 /* START, address + write, all data bytes, STOP.
  * hw:      Hardware channel, e.g. XMC_I2C1_CH0 = USIC 1, channel 0.
  * address: Already-shifted device address (i.e. 0x11 << 1 = 0x22).
@@ -51,6 +62,10 @@ bool i2c_write_bytes(XMC_USIC_CH_t *hw, uint8_t address, const uint8_t *data, si
         /* Queue the data byte for transmission, then wait for the device's ACK. */
         XMC_I2C_CH_MasterTransmit(hw, data[i]);
         success = wait_for_flags(hw, ACK_FLAGS);
+    }
+    if(!success) {
+        reset_i2c(hw);
+        return success;
     }
     /* Queue STOP to end the transaction, including after a failed ACK. */
     XMC_I2C_CH_MasterStop(hw);
@@ -88,6 +103,10 @@ bool i2c_read_bytes(XMC_USIC_CH_t *hw, uint8_t address, uint8_t *data, size_t co
         {
             /* Copy the completed byte from the hardware receive buffer. */
             data[i] = XMC_I2C_CH_GetReceivedData(hw);
+        }
+        else {
+            reset_i2c(hw);
+            return false;
         }
     }
     /* Queue STOP to end the transaction, even if the read failed. */
