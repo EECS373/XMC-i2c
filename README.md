@@ -20,8 +20,9 @@ Both return `true` on success and `false` on NACK or wait timeout.
 
 1. Copy `i2c.c` and `i2c.h` into the ModusToolbox project directory.
 2. Add `#include "i2c.h"` to your application.
-3. Configure I2C and its pins in the Device Configurator, and call
-   `cybsp_init()` before using these functions.
+3. Configure I2C and its pins in the Device Configurator
+4. Enable FIFO TX buffer(2+ words)
+5. Call `cybsp_init()` before using these functions.
 
 Pass the XMCLib channel name into each call. For example, this sends one raw
 byte(0x20) using USIC 0, channel 0 to an i2c device with address 0x11:
