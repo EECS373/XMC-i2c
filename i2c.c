@@ -14,9 +14,9 @@
  * delay_ms counts requested delays, will be slightly slower with the processing inside for loop.*/
 static bool wait_for_flags(XMC_USIC_CH_t *hw, uint32_t flags)
 {
-    for (uint32_t delay_ms = 0; delay_ms < WAIT_BUDGET_MS; delay_ms++)
+    for (uint32_t delay_us = 0; delay_us < WAIT_BUDGET_MS*1000; delay_us=delay_us+10)
     {
-        /* Read the hardware status; keep only the bits we are waiting for. */
+        /* Read the hardware status, keep only the bits we are waiting for. */
         uint32_t received = XMC_I2C_CH_GetStatusFlag(hw) & flags;
         if (received != 0U)
         {
@@ -26,8 +26,8 @@ static bool wait_for_flags(XMC_USIC_CH_t *hw, uint32_t flags)
             return (received & XMC_I2C_CH_STATUS_FLAG_NACK_RECEIVED) == 0U;
         }
 
-        /* Busy-wait 1 millisecond after an unsuccessful check; no timer ISR. */
-        XMC_Delay(1);
+        /* Busy-wait 10 microseconds after an unsuccessful check. */
+        XMC_DelayUs(10);
     }
     return false;
 }
